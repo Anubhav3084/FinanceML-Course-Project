@@ -87,5 +87,20 @@ def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_
 
     return result
 
+def IV(df, feature, target='default'):
+    df_feat = df[[feature, target]]
+    df_feat['bins'] = pd.qcut(df_feat[feature], q=10, duplicates='drop').astype(str)
+    df_feat['bins'] = df_feat['bins'].where(df_feat[feature].notna(), "Missing")
+
+    iv_bin = df_feat.groupby('bins')['default'].agg(Total='count', Bads='sum').reset_index()
+    iv_bin['Goods'] = iv_bin['Total'] - iv_bin['Bads']
+    iv_bin = iv_bin[['bins', 'Goods', 'Bads']]
+    iv_bin['Goods (%)'] = (iv_bin['Goods'] + 0.01) / iv_bin['Goods'].sum()
+    iv_bin['Bads (%)'] = (iv_bin['Bads'] + 0.01) / iv_bin['Bads'].sum()
+    iv_bin['WoE'] = np.log(iv_bin['Goods (%)'] / iv_bin['Bads (%)'])
+    iv_bin['IV_bin'] = (iv_bin['Goods (%)'] - iv_bin['Bads (%)']) * iv_bin['WoE']
+    iv = float(iv_bin['IV_bin'].sum())
+    return iv, iv_bin
+
 if __name__ == '__main__':
     pass
