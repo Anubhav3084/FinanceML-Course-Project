@@ -1,5 +1,9 @@
-Project/Data/train-2025.csv
-Project/Data/train-2025_with_target_variable.csv
+Project/Data/train-2026.csv
+Project/Data/train-2026_with_target_variable.csv
 Project/Data/temp_training.csv
-Project/Files/FinanceML_Feature_Register.xlsx
 Project/Data/ratio_and_flag_features.csv
+Project/Artifacts/xgb_model_ratio_and_flag_features.pkl
+Project/Model_scores/categorical_features.csv
+Project/Model_scores/scores_train.csv
+Project/Model_scores/scores_test.csv
+Project/Model_scores/scores_oot.csv
