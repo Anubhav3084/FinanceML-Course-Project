@@ -61,7 +61,7 @@ def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_
     overall_rate = data[target].mean()
 
     # calculate precision recall
-    result["population_share"] = result["records"] / len(data)
+    result["population (%)"] = result["records"] / len(data)
     result["precision (%)"] = result["defaults"] / result["records"]
     result["recall (%)"] = result["defaults"] / total_defaults if total_defaults else np.nan
 
@@ -76,6 +76,8 @@ def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_
 
     # calculate lift and cumulative lift
     result["lift"] = np.round(result["cumm_precision (%)"] / overall_rate, 3) if overall_rate else np.nan
+
+    result["population (%)"] = result["population (%)"].apply(lambda x: f"{x:.2%}")
 
     result["precision (%)"] = result["precision (%)"].apply(lambda x: f"{x:.2%}")
     result["recall (%)"] = result["recall (%)"].apply(lambda x: f"{x:.2%}")
