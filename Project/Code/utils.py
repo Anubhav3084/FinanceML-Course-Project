@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 
 def create_target_variable(stmt_date: str, def_date :str):
     """
@@ -29,7 +30,7 @@ def create_target_variable(stmt_date: str, def_date :str):
     return int(pd.notna(def_date) and (pd_window_start_date <= def_date <= pd_window_end_date))
 
 def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_riskier=False):
-    data = df[[feature, target]].dropna(subset=[target]).copy()
+    data = df[[feature, target]].copy()#.dropna(subset=[target]).copy()
 
     # create bins and aggregate them
     bins = pd.qcut(data[feature], q=n_bins, duplicates="drop")
@@ -88,7 +89,7 @@ def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_
     return result
 
 def IV(df, feature, target='default'):
-    df_feat = df[[feature, target]]
+    df_feat = df[[feature, target]].copy()
     df_feat['bins'] = pd.qcut(df_feat[feature], q=10, duplicates='drop').astype(str)
     df_feat['bins'] = df_feat['bins'].where(df_feat[feature].notna(), "Missing")
 
@@ -101,6 +102,41 @@ def IV(df, feature, target='default'):
     iv_bin['IV_bin'] = (iv_bin['Goods (%)'] - iv_bin['Bads (%)']) * iv_bin['WoE']
     iv = float(iv_bin['IV_bin'].sum())
     return iv, iv_bin
+
+def plot_woe_iv(iv_table, feature_name="Feature", figsize=(5, 5)):
+    table = iv_table.copy()
+
+    # Keep numeric intervals in ascending order; missing bins last
+    intervals = table["bins"].map(lambda value: value.left if hasattr(value, "left") else np.inf)
+    table = table.iloc[np.argsort(intervals.to_numpy(), kind="stable")]
+
+    x = np.arange(len(table))
+    labels = table["bins"].astype(str)
+    total_iv = table["IV_bin"].sum()
+
+    fig, ax_woe = plt.subplots(figsize=figsize)
+    ax_iv = ax_woe.twinx()
+
+    bars = ax_woe.bar(x, table["WoE"], width=0.65, color="steelblue", alpha=0.75, label="WoE")
+    line, = ax_iv.plot(x, table["IV_bin"], color="darkorange", marker="o", linewidth=2, label="IV contribution")
+
+    ax_woe.axhline(0, color="gray", linewidth=0.8)
+    ax_woe.set_xlabel("Bins")
+    ax_woe.set_ylabel("Weight of Evidence", color="steelblue")
+    ax_iv.set_ylabel("IV contribution", color="darkorange")
+
+    ax_woe.tick_params(axis="y", labelcolor="steelblue")
+    ax_iv.tick_params(axis="y", labelcolor="darkorange")
+    ax_iv.set_ylim(bottom=0)
+
+    ax_woe.set_xticks(x)
+    ax_woe.set_xticklabels(labels, rotation=90, ha="right")
+    ax_woe.set_title(f"{feature_name} — Total IV: {total_iv:.4f}")
+
+    ax_woe.legend(handles=[bars, line], labels=["WoE", "IV contribution"], loc="best")
+
+    fig.tight_layout()
+    return fig, (ax_woe, ax_iv)
 
 if __name__ == '__main__':
     pass
