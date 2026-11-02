@@ -28,5 +28,62 @@ def create_target_variable(stmt_date: str, def_date :str):
     if pd.notna(def_date) and def_date <= pd_window_start_date: return pd.NA
     return int(pd.notna(def_date) and (pd_window_start_date <= def_date <= pd_window_end_date))
 
+def precision_recall_by_bin(df, feature, target="default", n_bins=10, higher_is_riskier=False):
+    data = df[[feature, target]].dropna(subset=[target]).copy()
+
+    # create bins and aggregate them
+    bins = pd.qcut(data[feature], q=n_bins, duplicates="drop")
+    data["bin"] = bins
+
+    result = (
+        data.groupby("bin", observed=True)[target]
+        .agg(records="size", defaults="sum")
+        .reset_index()
+        .sort_values("bin", ascending=not higher_is_riskier)
+    )
+
+    # create a bin for missing value
+    result["bin"] = result["bin"].astype(object)
+    missing = data[feature].isna()
+
+    if missing.any():
+        result = pd.concat([
+            result,
+            pd.DataFrame([{
+                "bin": "Missing",
+                "records": missing.sum(),
+                "defaults": data.loc[missing, target].sum()
+            }])
+        ], ignore_index=True)
+
+    result = result.reset_index(drop=True)
+    total_defaults = data[target].sum()
+    overall_rate = data[target].mean()
+
+    # calculate precision recall
+    result["population_share"] = result["records"] / len(data)
+    result["precision (%)"] = result["defaults"] / result["records"]
+    result["recall (%)"] = result["defaults"] / total_defaults if total_defaults else np.nan
+
+    # calculate cumulative precision recall
+    cumulative_records = result["records"].cumsum()
+    cumulative_defaults = result["defaults"].cumsum()
+
+    result["cumm_precision (%)"] = cumulative_defaults / cumulative_records
+    result["cumm_recall (%)"] = (
+        cumulative_defaults / total_defaults if total_defaults else np.nan
+    )
+
+    # calculate lift and cumulative lift
+    result["lift"] = np.round(result["cumm_precision (%)"] / overall_rate, 3) if overall_rate else np.nan
+
+    result["precision (%)"] = result["precision (%)"].apply(lambda x: f"{x:.2%}")
+    result["recall (%)"] = result["recall (%)"].apply(lambda x: f"{x:.2%}")
+
+    result["cumm_precision (%)"] = result["cumm_precision (%)"].apply(lambda x: f"{x:.2%}")
+    result["cumm_recall (%)"] = result["cumm_recall (%)"].apply(lambda x: f"{x:.2%}")
+
+    return result
+
 if __name__ == '__main__':
     pass
