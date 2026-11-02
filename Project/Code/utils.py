@@ -23,7 +23,7 @@ def create_target_variable(stmt_date: str, def_date :str):
     if isinstance(def_date, str): def_date = datetime.strptime(def_date, '%Y-%m-%d').date()
 
     pd_window_start_date = (stmt_date + pd.DateOffset(months=7) + timedelta(days=1)).date()
-    pd_window_end_date = (pd_window_start_date + pd.DateOffset(months=7)).date()
+    pd_window_end_date = (pd_window_start_date + pd.DateOffset(months=12)).date()
 
     if pd.notna(def_date) and def_date <= pd_window_start_date: return pd.NA
     return int(pd.notna(def_date) and (pd_window_start_date <= def_date <= pd_window_end_date))
