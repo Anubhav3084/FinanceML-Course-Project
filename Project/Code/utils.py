@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
@@ -137,6 +138,80 @@ def plot_woe_iv(iv_table, feature_name="Feature", figsize=(5, 5)):
 
     fig.tight_layout()
     return fig, (ax_woe, ax_iv)
+
+def nearest_neighbour_imputer(data, training_data, feature, distance_col="log_asst_tot"):
+    original_index = data.index
+    result = data.reset_index(drop=True).copy()
+
+    candidates = training_data.loc[
+        training_data[feature].notna()
+        & np.isfinite(training_data[feature])
+        & np.isfinite(training_data[distance_col])
+        & training_data[distance_col].gt(0)
+    ].copy()
+
+    # Sort once: nearest firms will be around the insertion position
+    candidates = candidates.sort_values(distance_col).reset_index(drop=True)
+
+    sector_groups = candidates.groupby("ateco_sector").indices
+    city_groups = candidates.groupby("HQ_city").indices
+
+    global_median = candidates[feature].median()
+    cache = {}
+
+    def get_peers(sector, city):
+        # Select sector, then city, then the entire donor pool
+        peer_idxs = sector_groups.get(sector)
+
+        if peer_idxs is not None and len(peer_idxs) >= 5: key = ("sector", sector)
+        else:
+            peer_idxs = city_groups.get(city)
+
+            if peer_idxs is not None and len(peer_idxs) >= 5: key = ("city", city)
+            else:
+                key = ("global",)
+                peer_idxs = np.arange(len(candidates))
+
+        # Prepare each group only once
+        if key not in cache:
+            peers = candidates.iloc[peer_idxs]
+            sizes = peers[distance_col].to_numpy()
+            values = peers[feature].to_numpy()
+            k = min(len(peers), 50, max(5, int(np.ceil(0.05 * len(peers)))))
+            cache[key] = sizes, values, k
+
+        return cache[key]
+
+    # Process only rows needing imputation
+    missing_rows = result.loc[result[feature].isna()]
+
+    for index, row in tqdm(missing_rows.iterrows(), total=len(missing_rows)):
+        size = row[distance_col]
+
+        if pd.isna(size) or not np.isfinite(size) or size <= 0:
+            result.at[index, feature] = global_median
+            continue
+
+        sizes, values, k = get_peers(row["ateco_sector"], row["HQ_city"])
+
+        if k == 0: continue
+
+        query = np.log(size)
+        position = np.searchsorted(sizes, query)
+
+        # The k closest donors must be among these nearby candidates
+        left = max(0, position - k)
+        right = min(len(sizes), position + k)
+
+        distances = np.abs(sizes[left:right] - query)
+        nearest = np.argsort(distances, kind="stable")[:k]
+
+        result.at[index, feature] = np.median(
+            values[left:right][nearest]
+        )
+
+    result.index = original_index
+    return result[feature]
 
 if __name__ == '__main__':
     pass

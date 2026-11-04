@@ -7,3 +7,9 @@ Project/Model_scores/categorical_features.csv
 Project/Model_scores/scores_train.csv
 Project/Model_scores/scores_test.csv
 Project/Model_scores/scores_oot.csv
+Project/Data/train_imputed.csv
+Project/Data/oot1_imputed.csv
+Project/Data/oot2_imputed.csv
+Project/Data/train.csv
+Project/Data/oot1.csv
+Project/Data/oot2.csv
