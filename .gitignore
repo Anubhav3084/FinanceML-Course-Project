@@ -13,3 +13,7 @@ Project/Data/oot2_imputed.csv
 Project/Data/train.csv
 Project/Data/oot1.csv
 Project/Data/oot2.csv
+Project/Artifacts/logit_sm_model_ratio_and_flag_features_imputed.pkl
+Project/Model_scores/scores_train_imputed_logit.csv
+Project/Model_scores/scores_oot2_imputed_logit.csv
+Project/Model_scores/scores_oot1_imputed_logit.csv/
