@@ -213,7 +213,7 @@ def plot_woe_iv(iv_table, feature_name="Feature", figsize=(5, 5)):
 #     result.index = original_index
 #     return result[feature]
 
-def median_table_by_ateco_sector(df_train, impute_cols):
+def median_table_by_ateco_sector(df_train, impute_cols, asset_col="asst_tot"):
     """
         1. Compute sector wise medians for missing variables ratios.
         2. Also store the overall median for fall back.
@@ -222,8 +222,8 @@ def median_table_by_ateco_sector(df_train, impute_cols):
     """
     for c in df_train.columns:
         if c in impute_cols: df_train[c] = pd.to_numeric(df_train[c], errors="coerce")
-    ratio = df_train[impute_cols].div(df_train["asst_tot"], axis=0)
-    ratio["asst_tot"] = df_train["asst_tot"]
+    ratio = df_train[impute_cols].div(df_train[asset_col], axis=0)
+    ratio[asset_col] = df_train[asset_col]
     medians = ratio.groupby(df_train["ateco_sector"]).median()
     medians.loc["global"] = ratio.median()
     return medians.reset_index()
