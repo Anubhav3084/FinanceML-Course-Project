@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score, roc_curve
 
 def create_target_variable(stmt_date: str, def_date :str):
     """
@@ -227,6 +228,68 @@ def median_table_by_ateco_sector(df_train, impute_cols, asset_col="asst_tot"):
     medians = ratio.groupby(df_train["ateco_sector"]).median()
     medians.loc["global"] = ratio.median()
     return medians.reset_index()
+
+def visualize_feature(df, feature, target='default', disp=True):
+    X = df[~df[feature].isna()][feature]
+    y = df[~df[feature].isna()][target]
+    auc = roc_auc_score(y, X)
+    if auc > 0.5: print(f'As {feature} increases, the default increases')
+    else: print(f'As {feature} decreases, the default increases')
+    if disp:
+        plt.figure(figsize=(5, 4))
+        fpr, tpr, _ = roc_curve(y, X)
+        plt.plot(fpr, tpr, 'k')
+        plt.plot([0, 1], [0, 1], '--r')
+        plt.xlabel(f'Feature: {feature} value is decreasing')
+        plt.ylabel('Recall of the feature')
+        plt.title(f'Trend of the {feature}')
+        plt.tight_layout()
+        plt.show()
+
+def visualize_multiple_features(df, features, target='default', cols=3, disp=True):
+
+    results = []
+    n_features = len(features)
+    rows = int(np.ceil(n_features / cols))
+
+    if disp:
+        fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
+        axes = axes.flatten() if n_features > 1 else [axes]
+
+    for idx, feature in enumerate(features):
+        valid_data = df[[feature, target]].dropna()
+        X = valid_data[feature]
+        y = valid_data[target]
+
+        auc = roc_auc_score(y, X)
+        strength = max(auc, 1 - auc)
+        direction = 'Increases with feature' if auc > 0.5 else 'Decreases with feature'
+
+        results.append({
+            'Feature': feature,
+            'Predictive Strength': strength,
+            'Raw AUC': auc,
+            'Default Risk Direction': direction,
+        })
+
+        if disp:
+            ax = axes[idx]
+            fpr, tpr, _ = roc_curve(y, X)
+            ax.plot(fpr, tpr, 'k', label=f'Strength: {strength:.1%}')
+            ax.plot([0, 1], [0, 1], '--r', label='Random chance')
+            ax.set_xlabel(f'higher <--- x ---> Lower')
+            ax.set_ylabel('Recall of the feature')
+            ax.set_title(f'{feature}')
+            ax.legend(loc='lower right')
+
+    # Hide any leftover empty subplots in the last row
+    if disp:
+        for empty_idx in range(n_features, len(axes)): axes[empty_idx].set_visible(False)
+
+        plt.tight_layout()
+        plt.show()
+
+    return pd.DataFrame(results).sort_values(by='Predictive Strength', ascending=False)
 
 if __name__ == '__main__':
     pass

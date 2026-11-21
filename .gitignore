@@ -24,3 +24,6 @@ Project/Model_scores/scores_train_imputed_logit.csv
 Project/Model_scores/scores_oot2_imputed_logit.csv
 Project/Model_scores/scores_oot1_imputed_logit.csv
 Project/Code/WoE.ipynb
+Project/Data/train_features_imputed.csv
+Project/Data/oot1_features_imputed.csv
+Project/Data/oot2_features_imputed.csv
